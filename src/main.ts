@@ -8,7 +8,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create(AppModule, {
+  logger: ['error', 'warn', 'log', 'debug', 'verbose'], 
+})
   const reflector = app.get(Reflector)
 
   app.enableCors({
@@ -23,7 +25,7 @@ async function bootstrap() {
     new RolesGuard(reflector),
   )
 
-  app.useGlobalFilters(new AllExceptionsFilter())
+  //app.useGlobalFilters(new AllExceptionsFilter())
   app.useGlobalInterceptors(new ResponseInterceptor())
 
   app.useGlobalPipes(
