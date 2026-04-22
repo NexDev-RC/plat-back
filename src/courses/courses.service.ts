@@ -105,25 +105,36 @@ export class CoursesService {
   // ── Obtener curso por slug o ID (con secciones y lecciones) ───────────────
 
   async findBySlug(slugOrId: string) {
-    const { data, error } = await this.supabase.admin
-      .from('courses')
-      .select(
-        `id, title, slug, description, short_description, thumbnail_url, preview_video_url,
-         price, discount_price, rating, total_reviews, total_students,
-         total_duration, total_lessons, level, language, tags, is_published,
-         created_at, updated_at,
-         categories(id, name, slug),
-         users!courses_instructor_id_fkey(id, name, avatar_url, bio),
-         sections(
-           id, title, order,
-           lessons(id, title, description, video_url, duration, order, is_free)
-         )`,
-      )
-      .or(`slug.eq.${slugOrId},id.eq.${slugOrId}`)
-      .eq('is_published', true)
-      .single()
+  const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(slugOrId)
 
-    if (error || !data) throw new NotFoundException('Curso no encontrado')
+    const query = this.supabase.admin
+      .from('courses')
+      .select(`
+        id, title, slug, description, short_description, thumbnail_url,
+        preview_video_url, price, discount_price, rating, total_reviews,
+        total_students, total_duration, total_lessons, level, language,
+        tags, is_published, created_at, updated_at,
+        categories(id, name, slug),
+        users!courses_instructor_id_fkey(id, name, avatar_url, bio),
+        sections(
+          id, title, order,
+          lessons(id, title, description, video_url, duration, order, is_free)
+        )
+      `)
+      .eq('is_published', true)
+
+    if (isUUID) {
+      query.eq('id', slugOrId)
+    } else {
+      query.eq('slug', slugOrId)
+    }
+
+    const { data, error } = await query.maybeSingle()
+
+    if (error || !data) {
+      throw new NotFoundException('Curso no encontrado')
+    }
 
     return this.formatCourseDetail(data)
   }
