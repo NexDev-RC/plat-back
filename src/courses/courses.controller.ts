@@ -42,13 +42,13 @@ export class CoursesController {
 
   // ── Rutas autenticadas ─────────────────────────────────────────────────────
 
-  // GET /api/courses/manage/my  — instructor ve sus propios cursos
+  // GET /api/courses/manage/my  — instructor ve sus cursos, admin ve TODOS
   @Get('manage/my')
   @Roles('instructor', 'admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: '[Instructor] Mis cursos' })
+  @ApiOperation({ summary: '[Instructor] Mis cursos / [Admin] Todos los cursos' })
   findMyCourses(@CurrentUser() user: any) {
-    return this.courses.findMyCoures(user.id)
+    return this.courses.findMyCoures(user.id, user.role)
   }
 
   // GET /api/courses/manage/:id — instructor/admin ve cualquier estado

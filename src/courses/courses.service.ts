@@ -104,40 +104,40 @@ export class CoursesService {
 
   // ── Obtener curso por slug o ID (con secciones y lecciones) ───────────────
 
-  async findBySlug(slugOrId: string) {
+async findBySlug(slugOrId: string) {
   const isUUID =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(slugOrId)
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(slugOrId)
 
-    const query = this.supabase.admin
-      .from('courses')
-      .select(`
-        id, title, slug, description, short_description, thumbnail_url,
-        preview_video_url, price, discount_price, rating, total_reviews,
-        total_students, total_duration, total_lessons, level, language,
-        tags, is_published, created_at, updated_at,
-        categories(id, name, slug),
-        users!courses_instructor_id_fkey(id, name, avatar_url, bio),
-        sections(
-          id, title, order,
-          lessons(id, title, description, video_url, duration, order, is_free)
-        )
-      `)
-      .eq('is_published', true)
+  const query = this.supabase.admin
+    .from('courses')
+    .select(`
+      id, title, slug, description, short_description, thumbnail_url,
+      preview_video_url, price, discount_price, rating, total_reviews,
+      total_students, total_duration, total_lessons, level, language,
+      tags, is_published, created_at, updated_at,
+      categories(id, name, slug),
+      users!courses_instructor_id_fkey(id, name, avatar_url, bio),
+      sections(
+        id, title, order,
+        lessons(id, title, description, video_url, duration, order, is_free)
+      )
+    `)
+    .eq('is_published', true)
 
-    if (isUUID) {
-      query.eq('id', slugOrId)
-    } else {
-      query.eq('slug', slugOrId)
-    }
-
-    const { data, error } = await query.maybeSingle()
-
-    if (error || !data) {
-      throw new NotFoundException('Curso no encontrado')
-    }
-
-    return this.formatCourseDetail(data)
+  if (isUUID) {
+    query.eq('id', slugOrId)
+  } else {
+    query.eq('slug', slugOrId)
   }
+
+  const { data, error } = await query.maybeSingle()
+
+  if (error || !data) {
+    throw new NotFoundException('Curso no encontrado')
+  }
+
+  return this.formatCourseDetail(data)
+}
 
   // ── Obtener curso para el instructor/admin (incluyendo no publicados) ──────
 
@@ -171,19 +171,43 @@ export class CoursesService {
 
   // ── Mis cursos (instructor) ────────────────────────────────────────────────
 
-  async findMyCoures(instructorId: string) {
-    const { data, error } = await this.supabase.admin
+  async findMyCoures(userId: string, userRole: string) {
+    let query = this.supabase.admin
       .from('courses')
       .select(
-        `id, title, slug, thumbnail_url, price, rating, total_students,
-         is_published, created_at,
-         categories(id, name, slug)`,
+        `id, title, slug, thumbnail_url, price, discount_price,
+         rating, total_students, total_lessons, level, is_published, created_at,
+         categories(id, name, slug),
+         users!courses_instructor_id_fkey(id, name, avatar_url)`,
       )
-      .eq('instructor_id', instructorId)
       .order('created_at', { ascending: false })
 
+    // El admin ve TODOS los cursos; el instructor solo los suyos
+    if (userRole !== 'admin') {
+      query = query.eq('instructor_id', userId)
+    }
+
+    const { data, error } = await query
     if (error) throw new BadRequestException(error.message)
-    return data
+
+    return (data ?? []).map((c: any) => ({
+      id:            c.id,
+      title:         c.title,
+      slug:          c.slug,
+      thumbnailUrl:  c.thumbnail_url,
+      price:         c.price,
+      discountPrice: c.discount_price,
+      rating:        c.rating,
+      totalStudents: c.total_students,
+      totalLessons:  c.total_lessons,
+      level:         c.level,
+      isPublished:   c.is_published,
+      createdAt:     c.created_at,
+      category:      c.categories,
+      instructor:    c.users
+        ? { id: c.users.id, name: c.users.name, avatarUrl: c.users.avatar_url }
+        : null,
+    }))
   }
 
   // ── Crear curso ────────────────────────────────────────────────────────────
