@@ -6,12 +6,13 @@ import { UsersModule } from './users/users.module'
 import { CoursesModule } from './courses/courses.module'
 import { CategoriesModule } from './categories/categories.module'
 import { EnrollmentsModule } from './enrollments/enrollments.module'
+import { FacturasModule } from './facturas/facturas.module'
 import { SupabaseModule } from './common/supabase/supabase.module'
 
 @Module({
   imports: [
     // Variables de entorno disponibles en toda la app
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
 
     // Rate limiting: máximo 100 requests por minuto por IP
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
@@ -25,6 +26,7 @@ import { SupabaseModule } from './common/supabase/supabase.module'
     CoursesModule,
     CategoriesModule,
     EnrollmentsModule,
+    FacturasModule,
   ],
 })
 export class AppModule {}

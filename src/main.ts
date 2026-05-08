@@ -46,7 +46,7 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, document)
   }
 
-  const port = process.env.PORT ?? 3001
+  const port = process.env.PORT ?? 3002
   await app.listen(port)
   console.log(`🚀 EduFlow API corriendo en http://localhost:${port}/api`)
   console.log(`📚 Swagger docs en  http://localhost:${port}/api/docs`)

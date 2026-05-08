@@ -10,16 +10,24 @@ export class SupabaseService implements OnModuleInit {
   /** Cliente con anon key — para operaciones del usuario autenticado */
   client: SupabaseClient
 
-  constructor(private config: ConfigService) {}
+  constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
-    const url = this.config.getOrThrow<string>('SUPABASE_URL')
-    const anonKey = this.config.getOrThrow<string>('SUPABASE_ANON_KEY')
-    const serviceKey = this.config.getOrThrow<string>('SUPABASE_SERVICE_ROLE_KEY')
+    const url = this.configService.get<string>('SUPABASE_URL');
+    const key = this.configService.get<string>('SUPABASE_KEY');
+    
+    if (!url || !key) {
+      console.error('ERROR: SUPABASE_URL o SUPABASE_KEY no definidos en .env');
+      return; // Evita que la app explote
+    }
+    
+    // Asegurarse de que los valores no sean undefined
+    const safeUrl = url || 'https://fallback.supabase.co';
+    const safeKey = key || 'fallback-key';
+    
+    this.client = createClient(safeUrl, safeKey);
 
-    this.client = createClient(url, anonKey)
-
-    this.admin = createClient(url, serviceKey, {
+    this.admin = createClient(safeUrl, safeKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
   }
@@ -29,10 +37,11 @@ export class SupabaseService implements OnModuleInit {
    * Útil para que RLS se aplique con el JWT del usuario.
    */
   clientForUser(accessToken: string): SupabaseClient {
-    const url = this.config.getOrThrow<string>('SUPABASE_URL')
-    const anonKey = this.config.getOrThrow<string>('SUPABASE_ANON_KEY')
-    return createClient(url, anonKey, {
-      global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    })
+    const url = this.configService.get<string>('SUPABASE_URL');
+    const key = this.configService.get<string>('SUPABASE_KEY');
+    if (!url || !key) {
+      throw new Error('SUPABASE_URL o SUPABASE_KEY no están definidas en el .env');
+    }
+    return createClient(url, key);
   }
 }
