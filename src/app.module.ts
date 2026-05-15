@@ -7,6 +7,7 @@ import { CoursesModule } from './courses/courses.module'
 import { CategoriesModule } from './categories/categories.module'
 import { EnrollmentsModule } from './enrollments/enrollments.module'
 import { SupabaseModule } from './common/supabase/supabase.module'
+import { MailModule } from './mail/mail.module'
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SupabaseModule } from './common/supabase/supabase.module'
     SupabaseModule,
 
     // Módulos de dominio
+    MailModule,
     AuthModule,
     UsersModule,
     CoursesModule,
