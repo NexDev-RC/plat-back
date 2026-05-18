@@ -29,6 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       .from('users')
       .select('id, name, email, role, avatar_url, created_at')
       .eq('id', payload.sub)
+      .is('deleted_at', null)
       .single()
 
     if (error || !data) {

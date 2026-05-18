@@ -19,6 +19,7 @@ export class UsersService {
     const { data, error, count } = await this.supabase.admin
       .from('users')
       .select('id, name, email, role, avatar_url, bio, created_at', { count: 'exact' })
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -40,6 +41,7 @@ export class UsersService {
       .from('users')
       .select('id, name, email, role, avatar_url, bio, created_at')
       .eq('id', id)
+      .is('deleted_at', null)
       .single()
 
     if (error || !data) throw new NotFoundException('Usuario no encontrado')
@@ -47,9 +49,19 @@ export class UsersService {
     return this.formatUser(data)
   }
 
-  // ── Actualizar perfil propio ───────────────────────────────────────────────
+  // ── Actualizar perfil propio (vía /users/me) ───────────────────────────────
 
   async updateProfile(userId: string, dto: UpdateUserDto) {
+    return this.updateById(userId, userId, dto)
+  }
+
+  // ── Actualizar perfil por ID (solo el propio usuario) ──────────────────────
+
+  async updateById(targetId: string, requesterId: string, dto: UpdateUserDto) {
+    if (targetId !== requesterId) {
+      throw new ForbiddenException('Solo puedes actualizar tu propio perfil')
+    }
+
     const updateData: Record<string, any> = {}
     if (dto.name) updateData.name = dto.name
     if (dto.avatarUrl !== undefined) updateData.avatar_url = dto.avatarUrl
@@ -58,7 +70,8 @@ export class UsersService {
     const { data, error } = await this.supabase.admin
       .from('users')
       .update(updateData)
-      .eq('id', userId)
+      .eq('id', targetId)
+      .is('deleted_at', null)
       .select('id, name, email, role, avatar_url, bio, created_at')
       .single()
 
@@ -78,6 +91,7 @@ export class UsersService {
       .from('users')
       .update({ role: dto.role })
       .eq('id', targetId)
+      .is('deleted_at', null)
       .select('id, name, email, role, created_at')
       .single()
 
@@ -86,19 +100,36 @@ export class UsersService {
     return this.formatUser(data)
   }
 
-  // ── Eliminar usuario (solo admin) ─────────────────────────────────────────
+  // ── Eliminar usuario (soft delete) ────────────────────────────────────────
 
-  async remove(targetId: string, adminId: string) {
-    if (targetId === adminId) {
-      throw new ForbiddenException('No puedes eliminarte a ti mismo')
+  async remove(targetId: string, requesterId: string, requesterRole: string) {
+    if (requesterRole !== 'admin' && targetId !== requesterId) {
+      throw new ForbiddenException('No tienes permiso para eliminar este usuario')
+    }
+
+    if (requesterRole === 'admin' && targetId === requesterId) {
+      throw new ForbiddenException('No puedes eliminarte a ti mismo siendo admin')
+    }
+
+    // Verificar que el usuario existe y no está ya eliminado
+    const { data: existing } = await this.supabase.admin
+      .from('users')
+      .select('id, deleted_at')
+      .eq('id', targetId)
+      .single()
+
+    if (!existing) throw new NotFoundException('Usuario no encontrado')
+
+    if (existing.deleted_at) {
+      throw new NotFoundException('Usuario no encontrado')
     }
 
     const { error } = await this.supabase.admin
       .from('users')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', targetId)
 
-    if (error) throw new NotFoundException('Usuario no encontrado')
+    if (error) throw new Error(error.message)
 
     return { message: 'Usuario eliminado correctamente' }
   }

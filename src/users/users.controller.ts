@@ -41,12 +41,22 @@ export class UsersController {
     return this.users.updateProfile(user.id, dto)
   }
 
-  // GET /api/users/:id — solo admin
+  // GET /api/users/:id — propio usuario o admin
   @Get(':id')
-  @Roles('admin')
-  @ApiOperation({ summary: '[Admin] Ver usuario por ID' })
-  findOne(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Ver usuario por ID (propio usuario o admin)' })
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
     return this.users.findById(id)
+  }
+
+  // PATCH /api/users/:id — solo el propio usuario
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar usuario por ID (solo el propio usuario)' })
+  updateById(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.users.updateById(id, user.id, dto)
   }
 
   // PATCH /api/users/:id/role — solo admin
@@ -61,11 +71,10 @@ export class UsersController {
     return this.users.updateRole(id, dto, admin.id)
   }
 
-  // DELETE /api/users/:id — solo admin
+  // DELETE /api/users/:id — propio usuario (soft delete) o admin
   @Delete(':id')
-  @Roles('admin')
-  @ApiOperation({ summary: '[Admin] Eliminar usuario' })
-  remove(@Param('id') id: string, @CurrentUser() admin: any) {
-    return this.users.remove(id, admin.id)
+  @ApiOperation({ summary: 'Eliminar usuario (soft delete). Propio usuario o admin.' })
+  remove(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.users.remove(id, user.id, user.role)
   }
 }
