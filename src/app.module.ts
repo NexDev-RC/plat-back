@@ -8,6 +8,7 @@ import { CategoriesModule } from './categories/categories.module'
 import { EnrollmentsModule } from './enrollments/enrollments.module'
 import { SupabaseModule } from './common/supabase/supabase.module'
 import { MailModule } from './mail/mail.module'
+import { UserDetailsModule } from './user-details/user-details.module'
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MailModule } from './mail/mail.module'
     CoursesModule,
     CategoriesModule,
     EnrollmentsModule,
+    UserDetailsModule,
   ],
 })
 export class AppModule {}
