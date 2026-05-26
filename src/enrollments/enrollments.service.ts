@@ -2,10 +2,14 @@ import {
   Injectable, NotFoundException, ConflictException, ForbiddenException,
 } from '@nestjs/common'
 import { SupabaseService } from '../common/supabase/supabase.service'
+import { MailService } from '../mail/mail.service'
 
 @Injectable()
 export class EnrollmentsService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private mail: MailService,
+  ) {}
 
   // ── Mis inscripciones ──────────────────────────────────────────────────────
 
@@ -85,6 +89,25 @@ export class EnrollmentsService {
 
     // Incrementar total_students del curso
     await this.supabase.admin.rpc('increment_course_students', { course_id: courseId })
+
+    // Obtener datos del usuario para el correo
+    const { data: user } = await this.supabase.admin
+      .from('users')
+      .select('name, email')
+      .eq('id', userId)
+      .single()
+
+    // Enviar correo de confirmación de inscripción (no bloqueante)
+    if (user) {
+      this.mail
+        .sendEnrollmentConfirmation({
+          user: { name: user.name, email: user.email },
+          course: { title: course.title, id: course.id },
+        })
+        .catch((err) =>
+          console.error('[MailService] Error enviando confirmación de inscripción:', err),
+        )
+    }
 
     return data
   }

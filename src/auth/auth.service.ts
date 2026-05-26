@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { SupabaseService } from '../common/supabase/supabase.service'
+import { MailService } from '../mail/mail.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import * as bcrypt from 'bcryptjs'
@@ -15,6 +16,7 @@ export class AuthService {
   constructor(
     private supabase: SupabaseService,
     private jwt: JwtService,
+    private mail: MailService,
   ) {}
 
   // ── Registro ───────────────────────────────────────────────────────────────
@@ -49,6 +51,11 @@ export class AuthService {
     if (error) {
       throw new InternalServerErrorException('Error al crear el usuario')
     }
+
+    // 4. Enviar correo de bienvenida (no bloqueante)
+    this.mail.sendWelcome({ name: user.name, email: user.email }).catch((err) =>
+      console.error('[MailService] Error enviando correo de bienvenida:', err),
+    )
 
     const token = this.signToken(user.id, user.email, user.role)
 
