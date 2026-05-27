@@ -1,6 +1,13 @@
 import {
-  Controller, Get, Patch, Delete, Body, Param, Query,
-  ParseIntPipe, DefaultValuePipe,
+  Controller,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common'
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { UsersService } from './users.service'
@@ -14,7 +21,7 @@ import { Roles } from '../common/decorators/roles.decorator'
 export class UsersController {
   constructor(private users: UsersService) {}
 
-  // GET /api/users  — solo admin
+  // GET /api/users — solo admin
   @Get()
   @Roles('admin')
   @ApiOperation({ summary: '[Admin] Listar todos los usuarios' })
@@ -47,6 +54,17 @@ export class UsersController {
   @ApiOperation({ summary: '[Admin] Ver usuario por ID' })
   findOne(@Param('id') id: string) {
     return this.users.findById(id)
+  }
+
+  // PATCH /api/users/:id — solo admin
+  @Patch(':id')
+  @Roles('admin')
+  @ApiOperation({ summary: '[Admin] Actualizar datos básicos de un usuario' })
+  updateUserAsAdmin(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+  ) {
+    return this.users.updateProfile(id, dto)
   }
 
   // PATCH /api/users/:id/role — solo admin

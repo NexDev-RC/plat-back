@@ -10,7 +10,7 @@ import { UpdateUserDto, UpdateUserRoleDto } from './dto/update-user.dto'
 export class UsersService {
   constructor(private supabase: SupabaseService) {}
 
-  // ── Listar todos los usuarios (solo admin) ─────────────────────────────────
+  // ── Listar todos los usuarios ──────────────────────────────────────────────
 
   async findAll(page = 1, limit = 20) {
     const from = (page - 1) * limit
@@ -18,14 +18,16 @@ export class UsersService {
 
     const { data, error, count } = await this.supabase.admin
       .from('users')
-      .select('id, name, email, role, avatar_url, bio, created_at', { count: 'exact' })
+      .select('id, name, email, role, avatar_url, bio, created_at', {
+        count: 'exact',
+      })
       .order('created_at', { ascending: false })
       .range(from, to)
 
     if (error) throw new Error(error.message)
 
     return {
-      data: data.map(this.formatUser),
+      data: (data ?? []).map(this.formatUser),
       total: count ?? 0,
       page,
       limit,
@@ -47,13 +49,18 @@ export class UsersService {
     return this.formatUser(data)
   }
 
-  // ── Actualizar perfil propio ───────────────────────────────────────────────
+  // ── Actualizar datos básicos ───────────────────────────────────────────────
 
   async updateProfile(userId: string, dto: UpdateUserDto) {
     const updateData: Record<string, any> = {}
-    if (dto.name) updateData.name = dto.name
+
+    if (dto.name !== undefined) updateData.name = dto.name
     if (dto.avatarUrl !== undefined) updateData.avatar_url = dto.avatarUrl
     if (dto.bio !== undefined) updateData.bio = dto.bio
+
+    if (Object.keys(updateData).length === 0) {
+      return this.findById(userId)
+    }
 
     const { data, error } = await this.supabase.admin
       .from('users')
@@ -67,7 +74,7 @@ export class UsersService {
     return this.formatUser(data)
   }
 
-  // ── Cambiar rol de usuario (solo admin) ───────────────────────────────────
+  // ── Cambiar rol de usuario ────────────────────────────────────────────────
 
   async updateRole(targetId: string, dto: UpdateUserRoleDto, adminId: string) {
     if (targetId === adminId) {
@@ -78,7 +85,7 @@ export class UsersService {
       .from('users')
       .update({ role: dto.role })
       .eq('id', targetId)
-      .select('id, name, email, role, created_at')
+      .select('id, name, email, role, avatar_url, bio, created_at')
       .single()
 
     if (error || !data) throw new NotFoundException('Usuario no encontrado')
@@ -86,7 +93,7 @@ export class UsersService {
     return this.formatUser(data)
   }
 
-  // ── Eliminar usuario (solo admin) ─────────────────────────────────────────
+  // ── Eliminar usuario ──────────────────────────────────────────────────────
 
   async remove(targetId: string, adminId: string) {
     if (targetId === adminId) {
@@ -103,7 +110,7 @@ export class UsersService {
     return { message: 'Usuario eliminado correctamente' }
   }
 
-  // ── Helper ─────────────────────────────────────────────────────────────────
+  // ── Helper ────────────────────────────────────────────────────────────────
 
   private formatUser(u: any) {
     return {
